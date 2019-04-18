@@ -2,12 +2,12 @@
 
 namespace App\Domain\User;
 
-use App\Domain\ApplicationService;
+use App\Service\ServiceInterface;
 
 /**
- * Class.
+ * Service.
  */
-class UserService extends ApplicationService
+class UserService implements ServiceInterface
 {
     /**
      * @var UserRepository
@@ -27,11 +27,17 @@ class UserService extends ApplicationService
     /**
      * Find all users.
      *
-     * @return UserData[]
+     * @return User[] Array of users
      */
     public function findAllUsers(): array
     {
-        return $this->userRepository->findAll();
+        $result = [];
+
+        foreach ($this->userRepository->findAll() as $row) {
+            $result[] = User::fromArray($row);
+        }
+
+        return $result;
     }
 
     /**
@@ -39,27 +45,40 @@ class UserService extends ApplicationService
      *
      * @param int $userId The user ID
      *
-     * @return UserData The data
+     * @return User The data
      */
-    public function getUserById(int $userId): UserData
+    public function getUserById(int $userId): User
     {
-        return $this->userRepository->getById($userId);
+        $row = $this->userRepository->getUserById($userId);
+
+        return User::fromArray($row);
     }
 
     /**
      * Register new user.
      *
-     * @param UserData $user The user
+     * @param User $user The user
      *
      * @return int New ID
      */
-    public function registerUser(UserData $user): int
+    public function registerUser(User $user): int
     {
-        return $this->userRepository->insertUser($user);
+        $row = [
+            'username' => $user->getUsername(),
+            'first_name' => $user->getFirstName(),
+            'last_name' => $user->getLastName(),
+            'email' => $user->getEmail(),
+            'locale' => $user->getLocale(),
+            'password' => $user->getPassword(),
+            'role' => $user->getRole(),
+            'enabled' => $user->getEnabled() ? 1 : 0,
+        ];
+
+        return $this->userRepository->insertUser($row);
     }
 
     /**
-     * Register new user.
+     * Delete user.
      *
      * @param int $userId The user ID
      *

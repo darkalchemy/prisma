@@ -1,8 +1,7 @@
 <?php
 
-/**
- * Services and helper functions.
- */
+// Helper functions.
+
 use Symfony\Component\Translation\Translator;
 
 /**
@@ -38,16 +37,6 @@ function __($message): string
     }
 
     return $translated;
-}
-
-/**
- * Shorthand for now function.
- *
- * @return string ISO date time (Y-m-d H:i:s)
- */
-function now(): string
-{
-    return date('Y-m-d H:i:s');
 }
 
 /**

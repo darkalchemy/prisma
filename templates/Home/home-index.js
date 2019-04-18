@@ -1,74 +1,41 @@
-/**
- * Class
- */
-const HomeIndex = function () {
-
-    // The current object scope
+$.fn.homeIndex = function () {
     const $this = this;
 
-    /**
-     * Init
-     *
-     * @returns {boolean}
-     */
     this.init = function () {
-        return true;
+        $this.fetchData();
     };
 
-    /**
-     * Load content
-     *
-     * @returns {undefined}
-     */
-    this.load = function () {
+    this.fetchData = function () {
         $d.showLoad();
 
-        var params = {
+        const params = {
             username: "max",
             email: "max@example.com"
         };
 
-        ajax.post($d.getBaseUrl("home/load"), params).done(function (response) {
+        ajax.post($d.getBaseUrl('home/load'), params).done(function (data) {
             $d.hideLoad();
-            $d.log(response);
+
             $d.notify({
-                msg: "<b>Ok</b> " + response.message,
-                type: "success",
-                position: "center"
+                msg: '<b>Ok</b> ' + data.message,
+                type: 'success',
+                position: 'center'
             });
 
-            // Translations
-            response.text = {
-                'current_user': __('Current user'),
-                'user_id': __('User-ID'),
-                'username': __('Username'),
-                'its': __('Its'),
-            };
+            // render template
+            const userTemplate = $('#user-template').html();
+            $this.html($d.template(userTemplate, data));
 
-            const template = $('#user-template').html();
-            //Mustache.parse(template);
-            const output = Mustache.render(template, response);
-
-            $('#content').append(output);
-
-        }).fail(function (error) {
-            if (error.status == 422) {
-                $d.hideLoad();
-                // Show validation errors
-                const response = error.responseJSON;
-                $d.alert(response.error.message);
-                $(response.error.errors).each(function (i, error) {
-                    console.log("Error in field [" + error.field + "]: " + error.message);
-                });
-            } else {
-                ajax.handleError(error);
-            }
+        }).fail(function (xhr) {
+            $d.hideLoad();
+            ajax.handleError(xhr);
         });
     };
 
     this.init();
 };
 
-document.addEventListener("DOMContentLoaded", function () {
-    (new HomeIndex()).load();
+$(function () {
+    $('#app').homeIndex();
 });
+

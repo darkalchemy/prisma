@@ -4,15 +4,20 @@ namespace App\Action;
 
 use App\Domain\User\UserService;
 use Psr\Http\Message\ResponseInterface;
-use Slim\Container;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Slim\Views\Twig;
 
 /**
  * Action.
  */
-class UserIndexAction extends AbstractAction
+class UserIndexAction implements ActionInterface
 {
+    /**
+     * @var Twig
+     */
+    protected $twig;
+
     /**
      * @var UserService
      */
@@ -21,12 +26,13 @@ class UserIndexAction extends AbstractAction
     /**
      * Constructor.
      *
-     * @param Container $container The container
+     * @param Twig $twig
+     * @param UserService $userService
      */
-    public function __construct(Container $container)
+    public function __construct(Twig $twig, UserService $userService)
     {
-        parent::__construct($container);
-        $this->userService = $container->get(UserService::class);
+        $this->twig = $twig;
+        $this->userService = $userService;
     }
 
     /**
@@ -39,12 +45,10 @@ class UserIndexAction extends AbstractAction
      */
     public function __invoke(Request $request, Response $response): ResponseInterface
     {
-        $users = $this->userService->findAllUsers();
+        $viewData = [
+            'users' => $this->userService->findAllUsers(),
+        ];
 
-        $viewData = $this->getViewData([
-            'users' => $users,
-        ]);
-
-        return $this->render($response, 'User/user-index.twig', $viewData);
+        return $this->twig->render($response, 'User/user-index.twig', $viewData);
     }
 }

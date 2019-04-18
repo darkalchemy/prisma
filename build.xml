@@ -84,6 +84,8 @@
             <arg value="analyse"/>
             <arg value="-l"/>
             <arg value="max"/>
+            <arg value="-c"/>
+            <arg path="${basedir}/phpstan.neon"/>
             <arg value="src"/>
             <arg value="tests"/>
             <arg value="--no-interaction"/>
@@ -93,7 +95,8 @@
 
     <target name="fix-style" description="Code style fixer">
         <mkdir dir="${basedir}/build"/>
-        <get src="https://cs.symfony.com/download/php-cs-fixer-v2.phar" dest="${basedir}/build/php-cs-fixer.phar" skipexisting="true"/>
+        <get src="https://cs.symfony.com/download/php-cs-fixer-v2.phar" dest="${basedir}/build/php-cs-fixer.phar"
+             skipexisting="true"/>
         <exec executable="php" searchpath="true" resolveexecutable="true" failonerror="true">
             <arg value="${basedir}/build/php-cs-fixer.phar"/>
             <arg line="fix --config=.cs.php"/>
@@ -102,7 +105,8 @@
 
     <target name="check-style" description="Code style checker">
         <mkdir dir="${basedir}/build"/>
-        <get src="https://cs.symfony.com/download/php-cs-fixer-v2.phar" dest="${basedir}/build/php-cs-fixer.phar" skipexisting="true"/>
+        <get src="https://cs.symfony.com/download/php-cs-fixer-v2.phar" dest="${basedir}/build/php-cs-fixer.phar"
+             skipexisting="true"/>
         <exec executable="php" searchpath="true" resolveexecutable="true" failonerror="true">
             <arg value="${basedir}/build/php-cs-fixer.phar"/>
             <arg line="fix --dry-run --format=txt --verbose --diff --diff-format=udiff --config=.cs.php"/>
@@ -133,7 +137,7 @@
         </exec>
     </target>
 
-    <target name="check-all" depends="lint,check-style,phpstan,phpunit-coverage"/>
+    <target name="check-all" depends="lint,check-style,check-docblock,phpstan,phpunit-coverage"/>
 
     <target name="build">
         <mkdir dir="${basedir}/build"/>
@@ -217,36 +221,108 @@
         </delete>
 
         <!-- Zip master brunch -->
-        <zip destfile="${basedir}/build/${build.filename}">
+        <zip destfile="${basedir}/build/my_app_${now_file}.zip">
             <zipfileset dir="${basedir}/build/master"/>
         </zip>
     </target>
 
-    <target name="deploy" depends="build" description="Build and deploy project">
+    <target name="update-assets">
+        <property name="node_modules_dir" value="${basedir}/node_modules"/>
+        <property name="public_dir" value="${basedir}/public"/>
 
-        <!-- Chose between test, staging and prod environment -->
-        <input message="Which config should be used?" validArgs="test, staging, prod" addproperty="config"/>
+        <condition property="npm_ext" value=".cmd" else="">
+            <os family="windows"/>
+        </condition>
 
-        <!-- Load properties -->
-        <property file="${basedir}/config/ant.${config}.properties"/>
+        <delete dir="${node_modules_dir}"/>
 
-        <!-- Upload zip file-->
-        <echo message="Uploading ${build.filename}"/>
-        <scp file="${basedir}/build/${build.filename}"
-             todir="${build.ftp.username}:${build.ftp.password}@${build.ftp.host}:${build.ftp.path}"
-             trust="true"/>
+        <!-- Install npm packages -->
+        <exec executable="npm${npm_ext}" searchpath="true" resolveexecutable="true" failonerror="true">
+            <arg line="update"/>
+        </exec>
 
-        <!-- Upload deploy.php -->
-        <echo message="Uploading deploy.php"/>
-        <scp file="${basedir}/build/master/config/deploy.php"
-             todir="${build.ftp.username}:${build.ftp.password}@${build.ftp.host}:${build.ftp.path}"
-             trust="true"/>
+        <!-- Copy assets to the public directory -->
+        <copy file="${node_modules_dir}/bootstrap/dist/css/bootstrap.css" todir="${public_dir}/css" overwrite="true"/>
+        <copy file="${node_modules_dir}/bootstrap/dist/css/bootstrap.css.map" todir="${public_dir}/css" overwrite="true"/>
+        <copy file="${node_modules_dir}/bootstrap/dist/css/bootstrap.min.css" todir="${public_dir}/css" overwrite="true"/>
+        <copy file="${node_modules_dir}/bootstrap/dist/css/bootstrap.min.css.map" todir="${public_dir}/css" overwrite="true"/>
 
-        <!-- Delete build/master -->
-        <!--<delete dir="${basedir}/build/master"/>-->
+        <copy file="${node_modules_dir}/@fortawesome/fontawesome-free/css/all.css"
+              tofile="${public_dir}/css/fontawesome-all.css" overwrite="true"/>
+        <copy file="${node_modules_dir}/@fortawesome/fontawesome-free/css/all.min.css"
+              tofile="${public_dir}/css/fontawesome-all.min.css" overwrite="true"/>
+        <copy todir="${public_dir}/webfonts" overwrite="true">
+            <fileset dir="${node_modules_dir}/@fortawesome/fontawesome-free/webfonts"/>
+        </copy>
 
-        <!-- Delete zip file -->
-        <!-- <delete file="${basedir}/build/${build.filename}"/> -->
+        <copy file="${node_modules_dir}/bootstrap/dist/js/bootstrap.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/bootstrap/dist/js/bootstrap.js.map" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/bootstrap/dist/js/bootstrap.min.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/bootstrap/dist/js/bootstrap.min.js.map" todir="${public_dir}/js" overwrite="true"/>
+
+        <copy file="${node_modules_dir}/popper.js/dist/umd/popper.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/popper.js/dist/umd/popper.js.map" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/popper.js/dist/umd/popper.min.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/popper.js/dist/umd/popper.min.js.map" todir="${public_dir}/js" overwrite="true"/>
+
+        <copy file="${node_modules_dir}/jquery/dist/jquery.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/jquery/dist/jquery.min.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/jquery/dist/jquery.min.map" todir="${public_dir}/js" overwrite="true"/>
+
+        <copy file="${node_modules_dir}/datatables.net/js/jquery.dataTables.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/datatables.net/js/jquery.dataTables.min.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/datatables.net-bs4/css/dataTables.bootstrap4.css" todir="${public_dir}/css" overwrite="true"/>
+        <copy file="${node_modules_dir}/datatables.net-bs4/css/dataTables.bootstrap4.min.css" todir="${public_dir}/css" overwrite="true"/>
+        <copy file="${node_modules_dir}/datatables.net-bs4/js/dataTables.bootstrap4.js" todir="${public_dir}/js" overwrite="true"/>
+        <copy file="${node_modules_dir}/datatables.net-bs4/js/dataTables.bootstrap4.min.js" todir="${public_dir}/js" overwrite="true"/>
+
+        <delete dir="${node_modules_dir}"/>
+    </target>
+
+    <target name="seed-database" description="Data seeding">
+        <exec executable="${basedir}/vendor/bin/phinx${ext}" searchpath="true" resolveexecutable="true" failonerror="true">
+            <arg line="seed:run -c ${basedir}/config/phinx.php"/>
+        </exec>
+    </target>
+
+    <target name="migrate-database" description="Migrate database">
+        <exec executable="${basedir}/vendor/bin/phinx${ext}" searchpath="true" resolveexecutable="true" failonerror="true">
+            <arg line="migrate -c ${basedir}/config/phinx.php"/>
+        </exec>
+    </target>
+
+    <target name="reset-database" description="Data seeding">
+        <exec executable="php" searchpath="true" resolveexecutable="true" failonerror="true">
+            <arg line="${basedir}/slim reset-database"/>
+        </exec>
+    </target>
+
+    <target name="refresh-database" description="Reset, migrate and seed database">
+        <antcall target="reset-database" />
+        <antcall target="migrate-database" />
+        <antcall target="seed-database" />
+    </target>
+
+    <target name="create-migration" description="Create a empty migration">
+        <input message="Enter the name of the migration" addproperty="migration_name"/>
+
+        <exec executable="${basedir}/vendor/bin/phinx${ext}" searchpath="true" resolveexecutable="true" failonerror="true">
+            <arg line="create ${migration_name} -c ${basedir}/config/phinx.php"/>
+        </exec>
+    </target>
+
+    <target name="generate-migration" description="Generate database migration">
+        <input message="Enter the name of the migration" addproperty="migration_name"/>
+
+        <exec executable="${basedir}/vendor/bin/phinx-migrations${ext}" searchpath="true" resolveexecutable="true" failonerror="true">
+            <arg line="generate --name ${migration_name} --overwrite -c ${basedir}/config/phinx.php"/>
+        </exec>
+    </target>
+
+    <target name="parse-text" description="Parse text">
+        <exec executable="php" searchpath="true" resolveexecutable="true" failonerror="true">
+            <arg line="${basedir}/slim parse-text"/>
+        </exec>
     </target>
 
 </project>

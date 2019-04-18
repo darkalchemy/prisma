@@ -9,7 +9,7 @@ use Slim\Http\Response;
 /**
  * Action.
  */
-class HomePingAction extends AbstractAction
+class HomePingAction implements ActionInterface
 {
     /**
      * Action (Json).
@@ -21,8 +21,6 @@ class HomePingAction extends AbstractAction
      */
     public function __invoke(Request $request, Response $response): ResponseInterface
     {
-        $data = $request->getParsedBody();
-
-        return $response->withJson($data);
+        return $response->withJson($request->getParsedBody());
     }
 }

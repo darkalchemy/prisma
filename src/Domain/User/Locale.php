@@ -2,20 +2,21 @@
 
 namespace App\Domain\User;
 
-use Odan\Slim\Session\Session;
+use App\Service\ServiceInterface;
+use Odan\Session\SessionInterface;
 use Symfony\Component\Translation\Translator;
 
 /**
- * Localization.
+ * DTO.
  */
-class Locale
+class Locale implements ServiceInterface
 {
     /**
      * @var string Locale path
      */
     public $localePath;
     /**
-     * @var Session
+     * @var SessionInterface
      */
     private $session;
     /**
@@ -29,10 +30,10 @@ class Locale
      * Constructor.
      *
      * @param Translator $translator
-     * @param Session $session
+     * @param SessionInterface $session
      * @param string $localePath
      */
-    public function __construct(Translator $translator, Session $session, string $localePath)
+    public function __construct(Translator $translator, SessionInterface $session, string $localePath)
     {
         $this->translator = $translator;
         $this->session = $session;

@@ -2,8 +2,8 @@
 
 namespace App\Domain\User;
 
-use App\Domain\ServiceInterface;
-use Odan\Slim\Session\Session;
+use App\Service\ServiceInterface;
+use Odan\Session\SessionInterface;
 use RuntimeException;
 
 /**
@@ -12,9 +12,9 @@ use RuntimeException;
 class Auth implements ServiceInterface
 {
     /**
-     * Session.
+     * SessionInterface.
      *
-     * @var Session
+     * @var SessionInterface
      */
     private $session;
 
@@ -26,31 +26,31 @@ class Auth implements ServiceInterface
     /**
      * Constructor.
      *
-     * @param Session $session Storage
+     * @param SessionInterface $session The session storage
      * @param AuthRepository $authRepository The repository
      */
-    public function __construct(Session $session, AuthRepository $authRepository)
+    public function __construct(SessionInterface $session, AuthRepository $authRepository)
     {
         $this->session = $session;
         $this->authRepository = $authRepository;
     }
 
     /**
-     * Returns true if and only if an identity is available from storage.
+     * Check if a user is logged in.
      *
-     * @return bool
+     * @return bool status
      */
-    public function hasIdentity(): bool
+    public function check(): bool
     {
         return !empty($this->session->get('user'));
     }
 
     /**
-     * Clears the identity from persistent storage.
+     * Destroy the current logged in user session.
      *
      * @return void
      */
-    public function clearIdentity(): void
+    public function logout(): void
     {
         $this->session->remove('user');
 
@@ -62,13 +62,15 @@ class Auth implements ServiceInterface
     }
 
     /**
-     * Get user Id.
+     * Get user ID.
      *
-     * @return int User Id
+     * @throws RuntimeException
+     *
+     * @return int the user ID
      */
-    public function getId(): int
+    public function getUserId(): int
     {
-        $result = $this->getIdentity()->getId();
+        $result = $this->getUser()->getId();
 
         if (empty($result)) {
             throw new RuntimeException(__('Invalid or empty User-ID'));
@@ -78,11 +80,13 @@ class Auth implements ServiceInterface
     }
 
     /**
-     * Returns the identity from storage or null if no identity is available.
+     * Retrieves the currently logged in user.
      *
-     * @return UserData
+     * @throws RuntimeException
+     *
+     * @return User The logged-in user
      */
-    public function getIdentity(): UserData
+    public function getUser(): User
     {
         $user = $this->session->get('user');
         if (!$user) {
@@ -95,12 +99,12 @@ class Auth implements ServiceInterface
     /**
      * Performs an authentication attempt.
      *
-     * @param string $username
-     * @param string $password
+     * @param string $username username
+     * @param string $password password
      *
-     * @return UserData|null
+     * @return User|null the user or null
      */
-    public function authenticate(string $username, string $password): ?UserData
+    public function authenticate(string $username, string $password): ?User
     {
         $userRow = $this->authRepository->findUserByUsername($username);
 
@@ -108,7 +112,7 @@ class Auth implements ServiceInterface
             return null;
         }
 
-        $user = new UserData($userRow);
+        $user = User::fromArray($userRow);
 
         if (!$this->verifyPassword($password, $user->getPassword() ?: '')) {
             return null;
@@ -122,8 +126,8 @@ class Auth implements ServiceInterface
     /**
      * Returns true if password and hash is valid.
      *
-     * @param string $password
-     * @param string $hash
+     * @param string $password password
+     * @param string $hash stored hash
      *
      * @return bool Success
      */
@@ -135,11 +139,11 @@ class Auth implements ServiceInterface
     /**
      * Init user session.
      *
-     * @param UserData $user
+     * @param User $user the user
      *
      * @return void
      */
-    protected function startUserSession(UserData $user): void
+    protected function startUserSession(User $user): void
     {
         // Clear session data
         $this->session->destroy();
@@ -155,51 +159,61 @@ class Auth implements ServiceInterface
     /**
      * Set the identity into storage or null if no identity is available.
      *
-     * @param UserData $user
+     * @param User $user the user
      *
      * @return void
      */
-    public function setIdentity(UserData $user): void
+    protected function setIdentity(User $user): void
     {
         $this->session->set('user', $user);
     }
 
     /**
-     * Returns secure password hash.
+     * Generate a secure password hash.
      *
-     * @param string $password
+     * @param string $password password
      *
      * @return string
      */
     public function createPassword(string $password): string
     {
-        return password_hash($password, 1) ?: '';
+        return password_hash($password, PASSWORD_DEFAULT) ?: '';
     }
 
     /**
-     * Check user permission.
+     * Check whether the user has the given role.
      *
-     * @param string|array $role (e.g. 'ROLE_ADMIN' or 'ROLE_USER')
-     * or array('ROLE_ADMIN', 'ROLE_USER')
+     * @param string $role e.g. UserRole::ROLE_ADMIN
+     *
+     * @return bool True if the given role is assigned to the user
+     */
+    public function hasRole(string $role): bool
+    {
+        return $this->getUser()->getRole() === $role;
+    }
+
+    /**
+     * Check whether the user has at least one of the given roles.
+     *
+     * Accepts an array with roles and returns true if at least one of the roles
+     * in the array is assigned to the user.
+     *
+     * @param array $roles e.g. [UserRole::ROLE_ADMIN, UserRole::ROLE_USER]
      *
      * @return bool Status
      */
-    public function hasRole($role): bool
+    public function hasAnyRole(array $roles): bool
     {
-        // Current user role
-        $userRole = $this->getIdentity()->getRole();
+        return in_array($this->getUser()->getRole(), $roles, true);
+    }
 
-        // Full access for admin
-        if ($userRole === Role::ROLE_ADMIN) {
-            return true;
-        }
-        if ($role === $userRole) {
-            return true;
-        }
-        if (is_array($role) && in_array($userRole, $role)) {
-            return true;
-        }
-
-        return false;
+    /**
+     * Checks whether the user is an admin.
+     *
+     * @return bool Status
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(UserRole::ROLE_ADMIN);
     }
 }

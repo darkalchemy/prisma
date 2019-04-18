@@ -11,10 +11,6 @@ ini_set('display_errors', '0');
 // Timezone
 date_default_timezone_set('Europe/Berlin');
 
-// Assert options
-assert_options(ASSERT_ACTIVE, 1);
-assert_options(ASSERT_EXCEPTION, 1);
-
 // Slim settings
 $settings = [
     'httpVersion' => '1.1',
@@ -90,6 +86,14 @@ $settings['phinx'] = [
     ],
 ];
 
+// CSRF middleware settings
+$settings['csrf'] = [
+    'secret' => '{{app_secret}}',
+    'token_name' => '__token',
+    'protect_ajax' => false,
+    'protect_forms' => true,
+];
+
 // Database settings
 $settings['db'] = [
     'driver' => 'mysql',
@@ -121,11 +125,5 @@ $settings['commands'] = [
     \App\Console\ExampleCommand::class,
     \App\Console\InstallCommand::class,
     \App\Console\ResetDatabaseCommand::class,
-    \App\Console\MigrateDatabaseCommand::class,
-    \App\Console\RefreshDatabaseCommand::class,
-    \App\Console\GenerateMigrationCommand::class,
-    \App\Console\SeedDatabaseCommand::class,
-    \App\Console\CreateMigrationCommand::class,
     \App\Console\ParseTextCommand::class,
-    \App\Console\UpdateAssetsCommand::class,
 ];

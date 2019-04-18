@@ -2,98 +2,96 @@
 
 namespace App\Domain\User;
 
-use App\Repository\ApplicationRepository;
+use App\Repository\TableRepository;
+use App\Repository\QueryFactory;
+use App\Repository\RepositoryInterface;
 use DomainException;
 use InvalidArgumentException;
 
 /**
- * User repository.
+ * Repository.
  */
-class UserRepository extends ApplicationRepository
+class UserRepository implements RepositoryInterface
 {
+    /**
+     * @var QueryFactory
+     */
+    protected $queryFactory;
+
+    /**
+     * @var TableRepository
+     */
+    protected $tableRepository;
+
+    /**
+     * Constructor.
+     *
+     * @param QueryFactory $queryFactory the query factory
+     * @param TableRepository $tableRepository table repository
+     */
+    public function __construct(QueryFactory $queryFactory, TableRepository $tableRepository)
+    {
+        $this->queryFactory = $queryFactory;
+        $this->tableRepository = $tableRepository;
+    }
+
     /**
      * Find all users.
      *
-     * @return UserData[]
+     * @return array Rows
      */
     public function findAll(): array
     {
-        $rows = $this->fetchAll('users');
-
-        $result = [];
-        foreach ($rows as $row) {
-            $result[] = new UserData($row);
-        }
-
-        return $result;
+        return $this->tableRepository->fetchAll('users');
     }
 
     /**
      * Get user by id.
      *
-     * @param int $id User id
+     * @param int $userId User id
      *
      * @throws DomainException On error
      *
-     * @return UserData An model
+     * @return array The row
      */
-    public function getById(int $id): UserData
+    public function getUserById(int $userId): array
     {
-        $user = $this->findById($id);
+        $row = $this->findUserById($userId);
 
-        if (!$user) {
-            throw new DomainException(__('User not found: %s', $id));
+        if (!$row) {
+            throw new DomainException(__('User not found: %s', $userId));
         }
 
-        return $user;
+        return $row;
     }
 
     /**
      * Find by id.
      *
-     * @param int $id The ID
+     * @param int $userId The ID
      *
-     * @return UserData|null The model
+     * @return array The row
      */
-    public function findById(int $id): ?UserData
+    public function findUserById(int $userId): array
     {
-        $row = $this->fetchById('users', $id);
-
-        return $row ? new UserData($row) : null;
-    }
-
-    /**
-     * Insert or update user.
-     *
-     * @param UserData $user
-     *
-     * @return int User ID
-     */
-    public function saveUser(UserData $user): int
-    {
-        if ($user->getId() !== null) {
-            $this->updateUser($user);
-
-            return $user->getId();
-        }
-
-        return $this->insertUser($user);
+        return $this->tableRepository->fetchById('users', $userId);
     }
 
     /**
      * Update user.
      *
-     * @param UserData $user The user
+     * @param int $userId The user ID
+     * @param array $data The user data
      *
      * @return bool Success
      */
-    public function updateUser(UserData $user): bool
+    public function updateUser(int $userId, array $data): bool
     {
-        if (empty($user->getId())) {
+        if (empty($userId)) {
             throw new InvalidArgumentException('User ID required');
         }
 
-        $this->newUpdate('users', $user->toArray())->andWhere(['id' => $user->getId()])->execute();
+        $this->queryFactory->newUpdate('users', $data)->andWhere(['id' => $data['id']])->execute();
 
         return true;
     }
@@ -101,13 +99,13 @@ class UserRepository extends ApplicationRepository
     /**
      * Insert new user.
      *
-     * @param UserData $user The user
+     * @param array $data The user
      *
      * @return int The new ID
      */
-    public function insertUser(UserData $user): int
+    public function insertUser(array $data): int
     {
-        return (int)$this->newInsert('users', $user->toArray())->execute()->lastInsertId();
+        return (int)$this->queryFactory->newInsert('users', $data)->execute()->lastInsertId();
     }
 
     /**
@@ -119,7 +117,7 @@ class UserRepository extends ApplicationRepository
      */
     public function deleteUser(int $userId): bool
     {
-        $this->newDelete('users')->andWhere(['id' => $userId])->execute();
+        $this->queryFactory->newDelete('users')->andWhere(['id' => $userId])->execute();
 
         return true;
     }

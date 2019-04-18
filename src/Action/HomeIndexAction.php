@@ -2,59 +2,82 @@
 
 namespace App\Action;
 
+use Odan\Session\SessionInterface;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Slim\Views\Twig;
 
 /**
  * Action.
  */
-class HomeIndexAction extends AbstractAction
+class HomeIndexAction implements ActionInterface
 {
+    /**
+     * @var Twig
+     */
+    protected $twig;
+
+    /**
+     * @var SessionInterface
+     */
+    protected $session;
+
+    /**
+     * Constructor.
+     *
+     * @param Twig $twig
+     * @param SessionInterface $session
+     */
+    public function __construct(Twig $twig, SessionInterface $session)
+    {
+        $this->twig = $twig;
+        $this->session = $session;
+    }
+
     /**
      * Index action.
      *
-     * @param Request $request
-     * @param Response $response
+     * @param Request $request the request
+     * @param Response $response the response
      *
      * @return ResponseInterface
      */
     public function __invoke(Request $request, Response $response): ResponseInterface
     {
         // Increment counter
-        $counter = $this->session->get('counter', 0);
-        $counter++;
-        $this->session->set('counter', $counter);
+        $counter = $this->session->get('counter') ?? 0;
+        $this->session->set('counter', $counter++);
 
-        $text = [
-            'Loaded successfully!' => __('Loaded successfully!'),
-        ];
-
-        $viewData = $this->getViewData([
-            'text' => $text,
+        $viewData = [
+            'text' => $this->getText(),
             'counter' => $counter,
             'url' => $request->getUri(),
             'secure' => $request->getAttribute('secure') ? __('Yes') : __('No'),
-        ]);
+        ];
 
         // Render template
-        return $this->render($response, 'Home/home-index.twig', $viewData);
+        return $this->twig->render($response, 'Home/home-index.twig', $viewData);
     }
 
     /**
-     * Returns default text.
+     * Translate text.
      *
-     * @return mixed[] Array with translated text
+     * @return string[] Array with translated text
      */
     protected function getText(): array
     {
-        $text = parent::getText();
-
-        $text['Current user'] = __('Current user');
-        $text['User-ID'] = __('User-ID');
-        $text['Username'] = __('Username');
-        $text['Its'] = __("It's");
-
-        return $text;
+        return [
+            'Loaded successfully!' => __('Loaded successfully!'),
+            'Loading...' => __('Loading...'),
+            'Hello World' => __('Hello World'),
+            'Current user' => __('Current user'),
+            'User-ID' => __('User-ID'),
+            'Username' => __('Username'),
+            'User ID' => __('User ID'),
+            'Current time' => __('Current time'),
+            'Message' => __('Message'),
+            'Selected' => __('Selected'),
+        ];
     }
 }

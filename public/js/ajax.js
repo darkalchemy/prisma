@@ -1,14 +1,14 @@
 //
 // Ajax and REST
 //
-var ajax = {};
+let ajax = {};
 
 /**
  * Ajax POST request
  *
  * @param {string} url
  * @param {object} data
- * @param {object} options
+ * @param {object=} options
  * @returns {*}
  */
 ajax.post = function (url, data, options) {
@@ -54,7 +54,7 @@ ajax.handleError = function (xhr) {
         return false;
     }
 
-    var message = null;
+    let message = null;
 
     if (xhr.responseJSON) {
         if ('message' in xhr.responseJSON) {

@@ -2,31 +2,45 @@
 
 namespace App\Action;
 
+use App\Domain\User\Auth;
 use App\Domain\User\Locale;
 use Psr\Http\Message\ResponseInterface;
-use Slim\Container;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Slim\Router;
 
 /**
  * Action.
  */
-class UserLoginSubmitAction extends AbstractAction
+class UserLoginSubmitAction implements ActionInterface
 {
+    /**
+     * @var Auth
+     */
+    protected $auth;
+
     /**
      * @var Locale
      */
     protected $locale;
 
     /**
+     * @var Router
+     */
+    protected $router;
+
+    /**
      * Constructor.
      *
-     * @param Container $container
+     * @param Router $router
+     * @param Auth $auth
+     * @param Locale $locale
      */
-    public function __construct(Container $container)
+    public function __construct(Router $router, Auth $auth, Locale $locale)
     {
-        parent::__construct($container);
-        $this->locale = $container->get(Locale::class);
+        $this->router = $router;
+        $this->auth = $auth;
+        $this->locale = $locale;
     }
 
     /**
@@ -44,6 +58,7 @@ class UserLoginSubmitAction extends AbstractAction
         $password = $data['password'];
 
         $user = $this->auth->authenticate($username, $password);
+
         if (!empty($user) && $user->getLocale() !== null) {
             $this->locale->setLanguage($user->getLocale());
             $url = $this->router->pathFor('root');
